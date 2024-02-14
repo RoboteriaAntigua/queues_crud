@@ -1,66 +1,57 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Uso de Colas y Jobs en Laravel (Queues)
+    Sobre un crud basico que permite gestionar incidencias/ tickets de trabajo/ Ordenes de servicio.
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+# Crear un job:
+    (Un job para guardar informacion en la medida que van pasando cosas)
+    php artisan make:job Informacion
+    
 
-## About Laravel
+# Despachar un job con parametros:
+    Informacion::dispatch( par1 );
+    xej:    Informacion::dispatch( Productos::all() );
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+# Despachar el job, despues de la respuesta, ver el controlador
+    Informacion::dispatchAfterResponse( Incidencias::all());
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+# En app\Jobs vemos nuestro job: Informacion.php
+    public function handle(): void
+    {
+        //
+            sleep(2);
+            echo "Job depachado";    
+    }
+    Al iniciar la app, en el indice vemos que se muestra el index, y 2 segundos despues el mensaje "Job despachado"
+    Ideal para tareas largas, como mandar un mail, o actualizar el cache con muchos registros.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+# Hasta aqui hemos trabajado con el driver por default "sync", para que se ejecute en segundo plano (asyncronico )
+# hay varias opciones:
+    "database", "beanstalkd", "sqs", "redis", "null"
 
-## Learning Laravel
+# Asincronicamente
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+# database:
+    -> 1 Migrar, crea la tabla de jobs.
+        php artisan queue:table
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+    ->2 Informacion::dispatch()->onConnection('database');  // De esta forma cada job puede ir a una distinta cola.
+    ->2 Alternativa: en el .env le decimos que la database es la conexion por defecto;
+        QUEUE_CONNECTION=database
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+# conecciones: 
+    son los drivers.
+    Una coneccion puede tener muchas colas
+# queues:
+    Son las colas de trabajos. 
+    Una cola puede tener muchos jobs.
+    Puede haber muchas colas.
 
-## Laravel Sponsors
+# Workers (se pueden dejar varios workers en proceso)
+    Los workers pueden escuchar a cierta cola con cierta coneccion.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+    php artisan queue:listen (para desarrollo porque consume muchos recursos)
+    php artisan queue:work  (procesa los jobs default unicamente)
+    php artisan queue:work database (procesa los jobs que salen por base de datos unicamente)
+    php artisan queue:work --queue=secondary
 
-### Premium Partners
-
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
-
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+# a mejorar:
+    Log::info("trabajandooo..."); deberia imprimir los jobs que van saliendo y no funciona.
